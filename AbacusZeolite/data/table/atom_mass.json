@@ -1,0 +1,594 @@
+{
+    "elements": [
+        {
+            "elem": "H",
+            "name": "Hydrogen",
+            "mass": 1.008
+        },
+        {
+            "elem": "He",
+            "name": "Helium",
+            "mass": 4.0026
+        },
+        {
+            "elem": "Li",
+            "name": "Lithium",
+            "mass": 6.94
+        },
+        {
+            "elem": "Be",
+            "name": "Beryllium",
+            "mass": 9.0122
+        },
+        {
+            "elem": "B",
+            "name": "Boron",
+            "mass": 10.81
+        },
+        {
+            "elem": "C",
+            "name": "Carbon",
+            "mass": 12.011
+        },
+        {
+            "elem": "N",
+            "name": "Nitrogen",
+            "mass": 14.007
+        },
+        {
+            "elem": "O",
+            "name": "Oxygen",
+            "mass": 15.999
+        },
+        {
+            "elem": "F",
+            "name": "Fluorine",
+            "mass": 18.998
+        },
+        {
+            "elem": "Ne",
+            "name": "Neon",
+            "mass": 20.180
+        },
+        {
+            "elem": "Na",
+            "name": "Sodium",
+            "mass": 22.990
+        },
+        {
+            "elem": "Mg",
+            "name": "Magnesium",
+            "mass": 24.305
+        },
+        {
+            "elem": "Al",
+            "name": "Aluminum",
+            "mass": 26.982
+        },
+        {
+            "elem": "Si",
+            "name": "Silicon",
+            "mass": 28.085
+        },
+        {
+            "elem": "P",
+            "name": "Phosphorus",
+            "mass": 30.974
+        },
+        {
+            "elem": "S",
+            "name": "Sulfur",
+            "mass": 32.06
+        },
+        {
+            "elem": "Cl",
+            "name": "Chlorine",
+            "mass": 35.45
+        },
+        {
+            "elem": "Ar",
+            "name": "Argon",
+            "mass": 39.948
+        },
+        {
+            "elem": "K",
+            "name": "Potassium",
+            "mass": 39.098
+        },
+        {
+            "elem": "Ca",
+            "name": "Calcium",
+            "mass": 40.078
+        },
+        {
+            "elem": "Sc",
+            "name": "Scandium",
+            "mass": 44.956
+        },
+        {
+            "elem": "Ti",
+            "name": "Titanium",
+            "mass": 47.867
+        },
+        {
+            "elem": "V",
+            "name": "Vanadium",
+            "mass": 50.942
+        },
+        {
+            "elem": "Cr",
+            "name": "Chromium",
+            "mass": 51.996
+        },
+        {
+            "elem": "Mn",
+            "name": "Manganese",
+            "mass": 54.938
+        },
+        {
+            "elem": "Fe",
+            "name": "Iron",
+            "mass": 55.845
+        },
+        {
+            "elem": "Co",
+            "name": "Cobalt",
+            "mass": 58.933
+        },
+        {
+            "elem": "Ni",
+            "name": "Nickel",
+            "mass": 58.693
+        },
+        {
+            "elem": "Cu",
+            "name": "Copper",
+            "mass": 63.546
+        },
+        {
+            "elem": "Zn",
+            "name": "Zinc",
+            "mass": 65.38
+        },
+        {
+            "elem": "Ga",
+            "name": "Gallium",
+            "mass": 69.723
+        },
+        {
+            "elem": "Ge",
+            "name": "Germanium",
+            "mass": 72.63
+        },
+        {
+            "elem": "As",
+            "name": "Arsenic",
+            "mass": 74.922
+        },
+        {
+            "elem": "Se",
+            "name": "Selenium",
+            "mass": 78.971
+        },
+        {
+            "elem": "Br",
+            "name": "Bromine",
+            "mass": 79.904
+        },
+        {
+            "elem": "Kr",
+            "name": "Krypton",
+            "mass": 83.798
+        },
+        {
+            "elem": "Rb",
+            "name": "Rubidium",
+            "mass": 85.468
+        },
+        {
+            "elem": "Sr",
+            "name": "Strontium",
+            "mass": 87.62
+        },
+        {
+            "elem": "Y",
+            "name": "Yttrium",
+            "mass": 88.906
+        },
+        {
+            "elem": "Zr",
+            "name": "Zirconium",
+            "mass": 91.224
+        },
+        {
+            "elem": "Nb",
+            "name": "Niobium",
+            "mass": 92.906
+        },
+        {
+            "elem": "Mo",
+            "name": "Molybdenum",
+            "mass": 95.95
+        },
+        {
+            "elem": "Tc",
+            "name": "Technetium",
+            "mass": 98
+        },
+        {
+            "elem": "Ru",
+            "name": "Ruthenium",
+            "mass": 101.07
+        },
+        {
+            "elem": "Rh",
+            "name": "Rhodium",
+            "mass": 102.91
+        },
+        {
+            "elem": "Pd",
+            "name": "Palladium",
+            "mass": 106.42
+        },
+        {
+            "elem": "Ag",
+            "name": "Silver",
+            "mass": 107.87
+        },
+        {
+            "elem": "Cd",
+            "name": "Cadmium",
+            "mass": 112.41
+        },
+        {
+            "elem": "In",
+            "name": "Indium",
+            "mass": 114.82
+        },
+        {
+            "elem": "Sn",
+            "name": "Tin",
+            "mass": 118.71
+        },
+        {
+            "elem": "Sb",
+            "name": "Antimony",
+            "mass": 121.76
+        },
+        {
+            "elem": "Te",
+            "name": "Tellurium",
+            "mass": 127.60
+        },
+        {
+            "elem": "I",
+            "name": "Iodine",
+            "mass": 126.90
+        },
+        {
+            "elem": "Xe",
+            "name": "Xenon",
+            "mass": 131.29
+        },
+        {
+            "elem": "Cs",
+            "name": "Cesium",
+            "mass": 132.91
+        },
+        {
+            "elem": "Ba",
+            "name": "Barium",
+            "mass": 137.33
+        },
+        {
+            "elem": "La",
+            "name": "Lanthanum",
+            "mass": 138.91
+        },
+        {
+            "elem": "Ce",
+            "name": "Cerium",
+            "mass": 140.12
+        },
+        {
+            "elem": "Pr",
+            "name": "Praseodymium",
+            "mass": 140.91
+        },
+        {
+            "elem": "Nd",
+            "name": "Neodymium",
+            "mass": 144.24
+        },
+        {
+            "elem": "Pm",
+            "name": "Promethium",
+            "mass": 145
+        },
+        {
+            "elem": "Sm",
+            "name": "Samarium",
+            "mass": 150.36
+        },
+        {
+            "elem": "Eu",
+            "name": "Europium",
+            "mass": 151.96
+        },
+        {
+            "elem": "Gd",
+            "name": "Gadolinium",
+            "mass": 157.25
+        },
+        {
+            "elem": "Tb",
+            "name": "Terbium",
+            "mass": 158.93
+        },
+        {
+            "elem": "Dy",
+            "name": "Dysprosium",
+            "mass": 162.50
+        },
+        {
+            "elem": "Ho",
+            "name": "Holmium",
+            "mass": 164.93
+        },
+        {
+            "elem": "Er",
+            "name": "Erbium",
+            "mass": 167.26
+        },
+        {
+            "elem": "Tm",
+            "name": "Thulium",
+            "mass": 168.93
+        },
+        {
+            "elem": "Yb",
+            "name": "Ytterbium",
+            "mass": 173.04
+        },
+        {
+            "elem": "Lu",
+            "name": "Lutetium",
+            "mass": 174.97
+        },
+        {
+            "elem": "Hf",
+            "name": "Hafnium",
+            "mass": 178.49
+        },
+        {
+            "elem": "Ta",
+            "name": "Tantalum",
+            "mass": 180.95
+        },
+        {
+            "elem": "W",
+            "name": "Tungsten",
+            "mass": 183.84
+        },
+        {
+            "elem": "Re",
+            "name": "Rhenium",
+            "mass": 186.21
+        },
+        {
+            "elem": "Os",
+            "name": "Osmium",
+            "mass": 190.23
+        },
+        {
+            "elem": "Ir",
+            "name": "Iridium",
+            "mass": 192.22
+        },
+        {
+            "elem": "Pt",
+            "name": "Platinum",
+            "mass": 195.08
+        },
+        {
+            "elem": "Au",
+            "name": "Gold",
+            "mass": 196.97
+        },
+        {
+            "elem": "Hg",
+            "name": "Mercury",
+            "mass": 200.59
+        },
+        {
+            "elem": "Tl",
+            "name": "Thallium",
+            "mass": 204.38
+        },
+        {
+            "elem": "Pb",
+            "name": "Lead",
+            "mass": 207.2
+        },
+        {
+            "elem": "Bi",
+            "name": "Bismuth",
+            "mass": 208.98
+        },
+        {
+            "elem": "Po",
+            "name": "Polonium",
+            "mass": 209
+        },
+        {
+            "elem": "At",
+            "name": "Astatine",
+            "mass": 210
+        },
+        {
+            "elem": "Rn",
+            "name": "Radon",
+            "mass": 222
+        },
+        {
+            "elem": "Fr",
+            "name": "Francium",
+            "mass": 223
+        },
+        {
+            "elem": "Ra",
+            "name": "Radium",
+            "mass": 226
+        },
+        {
+            "elem": "Ac",
+            "name": "Actinium",
+            "mass": 227
+        },
+        {
+            "elem": "Th",
+            "name": "Thorium",
+            "mass": 232.04
+        },
+        {
+            "elem": "Pa",
+            "name": "Protactinium",
+            "mass": 231.04
+        },
+        {
+            "elem": "U",
+            "name": "Uranium",
+            "mass": 238.03
+        },
+        {
+            "elem": "Np",
+            "name": "Neptunium",
+            "mass": 237
+        },
+        {
+            "elem": "Pu",
+            "name": "Plutonium",
+            "mass": 244
+        },
+        {
+            "elem": "Am",
+            "name": "Americium",
+            "mass": 243
+        },
+        {
+            "elem": "Cm",
+            "name": "Curium",
+            "mass": 247
+        },
+        {
+            "elem": "Bk",
+            "name": "Berkelium",
+            "mass": 247
+        },
+        {
+            "elem": "Cf",
+            "name": "Californium",
+            "mass": 251
+        },
+        {
+            "elem": "Es",
+            "name": "Einsteinium",
+            "mass": 252
+        },
+        {
+            "elem": "Fm",
+            "name": "Fermium",
+            "mass": 257
+        },
+        {
+            "elem": "Md",
+            "name": "Mendelevium",
+            "mass": 258
+        },
+        {
+            "elem": "No",
+            "name": "Nobelium",
+            "mass": 259
+        },
+        {
+            "elem": "Lr",
+            "name": "Lawrencium",
+            "mass": 262
+        },
+        {
+            "elem": "Rf",
+            "name": "Rutherfordium",
+            "mass": 267
+        },
+        {
+            "elem": "Db",
+            "name": "Dubnium",
+            "mass": 270
+        },
+        {
+            "elem": "Sg",
+            "name": "Seaborgium",
+            "mass": 271
+        },
+        {
+            "elem": "Bh",
+            "name": "Bohrium",
+            "mass": 270
+        },
+        {
+            "elem": "Hs",
+            "name": "Hassium",
+            "mass": 277
+        },
+        {
+            "elem": "Mt",
+            "name": "Meitnerium",
+            "mass": 276
+        },
+        {
+            "elem": "Ds",
+            "name": "Darmstadtium",
+            "mass": 281
+        },
+        {
+            "elem": "Rg",
+            "name": "Roentgenium",
+            "mass": 282
+        },
+        {
+            "elem": "Cn",
+            "name": "Copernicium",
+            "mass": 285
+        },
+        {
+            "elem": "Nh",
+            "name": "Nihonium",
+            "mass": 286
+        },
+        {
+            "elem": "Fl",
+            "name": "Flerovium",
+            "mass": 289
+        },
+        {
+            "elem": "Mc",
+            "name": "Moscovium",
+            "mass": 290
+        },
+        {
+            "elem": "Lv",
+            "name": "Livermorium",
+            "mass": 293
+        },
+        {
+            "elem": "Ts",
+            "name": "Tennessine",
+            "mass": 294
+        },
+        {
+            "elem": "Og",
+            "name": "Oganesson",
+            "mass": 294
+        }
+    ]
+}

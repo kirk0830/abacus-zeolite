@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "AbacusZeolite"
+version = "0.1"
+description = ""
+authors = ["huangyk@aisi.ac.cn"]
+readme = "README.md"
+packages = [{include = "AbacusZeolite"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+ase = "*"
+
+[tool.poetry.scripts]
+AbacusZeolite = "AbacusZeolite.main:main"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
