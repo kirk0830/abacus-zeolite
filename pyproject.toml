@@ -9,6 +9,11 @@ packages = [{include = "AbacusZeolite"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 ase = "*"
+numpy = "*"
+pandas = "*"
+scipy = "*"
+matplotlib = "*"
+pubchempy = "*"
 
 [tool.poetry.scripts]
 AbacusZeolite = "AbacusZeolite.main:main"

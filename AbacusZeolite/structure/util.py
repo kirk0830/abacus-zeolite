@@ -13,12 +13,15 @@ import os
 import unittest
 import logging
 import time
+import json
 
 # third-party modules
 import numpy as np
 
 # home-made modules
 from AbacusZeolite.test.util import init as test_init
+
+where_am_i = os.path.dirname(os.path.abspath(__file__))
 
 def abc_angles_to_vec(lat: list) -> np.ndarray:
     """convert lattice parameters to vectors
@@ -93,6 +96,44 @@ def rdf(cell: np.ndarray,
     g[0] = 0 # the first bin is always 0
     return bins[:-1], g
 
+def center(atoms: np.ndarray, weight = None, **kwargs):
+    '''calculate the center of selected atoms
+    
+    Parameters
+    ----------
+    atoms : np.ndarray
+        the coordinates of the atoms
+    weight : None|str
+        the weight of the atoms, default is None, which corresponding to
+        the equal weight for each atom/geometrical center, can also be 
+        'mass' for the mass center of the atoms
+    elem : list
+        the list of atomic symbols, if weight is 'mass', this parameter
+        must be given
+    
+    Returns
+    -------
+    np.ndarray
+        the center of the selected atoms
+    '''
+    power = np.ones(atoms.shape[0])
+    if weight == 'mass':
+        elem = kwargs.get('elem')
+        if elem is None:
+            errmsg = 'elem should be given when weight is mass'
+            logging.error(errmsg)
+            raise ValueError(errmsg)
+        index = os.path.join(os.path.dirname(where_am_i), 'data', 'table', 'index.json')
+        with open(index) as f:
+            index = json.load(f)
+        mass = os.path.join(os.path.dirname(where_am_i), 'data', 'table', 'mass.json')
+        with open(mass) as f:
+            mass = json.load(f)
+        power = np.array([mass[index[e]] for e in elem])
+    
+    # calculate the center
+    return np.average(atoms, axis=0, weights=power)
+ 
 class TestStructureUtil(unittest.TestCase):
     def test_convert_between_abc_and_vec(self):
         lat = np.array([10, 10, 10, 90, 90, 90])
@@ -124,7 +165,7 @@ class TestStructureUtil(unittest.TestCase):
         
     @unittest.skip('overall workflow, not always needed to test')
     def test_rdf(self):
-        from AbacusZeolite.data.iza import download
+        from AbacusZeolite.data.IZA import download
         from ase.io.cif import read_cif
         import matplotlib.pyplot as plt
         

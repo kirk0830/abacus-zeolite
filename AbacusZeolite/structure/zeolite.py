@@ -15,15 +15,13 @@ from scipy.optimize import minimize
 # home-made modules
 from AbacusZeolite.test.util import init as test_init
 
-def count_nat_in_box(atoms: np.ndarray,
-                     xlo, xhi, ylo, yhi, zlo, zhi) -> int:
-    '''calculate the number of atoms in the box'''
-    return np.sum((atoms[:, 0] >= xlo) & (atoms[:, 0] < xhi) &
-                  (atoms[:, 1] >= ylo) & (atoms[:, 1] < yhi) &
-                  (atoms[:, 2] >= zlo) & (atoms[:, 2] < zhi))
-
 class OctreeBox:
-    '''Octree box for the zeolite structure'''
+    '''Octree box for the zeolite structure
+    
+    Documentation
+    -------------
+    https://ucoyxk075n.feishu.cn/docx/WP8sdHJARoYrRExMbvMcvmFLnaf
+    '''
     def __init__(self, root, code):
         '''
         build a Octree box
@@ -118,24 +116,143 @@ class OctreeBox:
         '''get the volume of the box'''
         return self.length()**3
 
-    @staticmethod # what if I don't use the staticmethod decorator?
-    def is_adjcent(box1: 'OctreeBox', box2: 'OctreeBox'):
-        '''check whether the other box is adjcent to the current box by
+    @staticmethod
+    def count_nat_in_box(atoms: np.ndarray,
+                         xlo, xhi, ylo, yhi, zlo, zhi) -> int:
+        '''calculate the number of atoms in the box'''
+        return np.sum((atoms[:, 0] >= xlo) & (atoms[:, 0] < xhi) &
+                      (atoms[:, 1] >= ylo) & (atoms[:, 1] < yhi) &
+                      (atoms[:, 2] >= zlo) & (atoms[:, 2] < zhi))
+
+    @staticmethod
+    def is_adjacent(box1: 'OctreeBox', box2: 'OctreeBox'):
+        '''check whether the other box is adjacent to the current box by
         calculating centers of them two and the length of them. If there
         is one component of the distance of the centers is equal to the
-        sum of the length of them, the other two components have ranges
-        overlapped, then the two boxes are adjcent.
+        sum of the length of them, the other two components should be 
+        smaller than the sum of the length of them.
         '''
         center1, center2 = box1.center(), box2.center()
         length1, length2 = box1.length(), box2.length()
-        bound1, bound2 = box1.boundaries(), box2.boundaries()
         
-        dist = np.abs((center1 - center2 + 0.5) % 1 - 0.5)
+        dist = np.abs((center1 - center2 + 0.5) % 1 - 0.5) # we consider the PBC
 
-        cond1 = any([np.isclose(d, length1 + length2) for d in dist])
-        # TBD
-    
-    
+        delta = np.array([((length1 + length2)/2 - d) for d in dist])
+        # there should be one zero and two positive numbers
+        return np.sum(delta == 0) == 1 and np.sum(delta > 0) == 2
+
+    def adjacent_with(self, other: 'OctreeBox'):
+        '''check whether the other box is adjacent to the current box'''
+        return OctreeBox.is_adjacent(self, other)
+
+    @staticmethod
+    def boxgen(atoms: np.ndarray, size_thr = 1/2**4):
+        '''generate the boxes in which there are no atoms in them. This
+        function is useful when finding the cavities of the zeolite.
+        
+        Parameters
+        ----------
+        atoms : np.ndarray
+            the atomic coordinates in shape (n, 3), should be given in
+            direct coordinates, all components should be within the range
+            [-0.5, 0.5)
+        cell : np.ndarray
+            the cell matrix in shape (3, 3), a flattened explanation would
+            be [a11, a12, a13, a21, a22, a23, a31, a32, a33]
+        size_thr : float
+            the threshold of the box size. When the size of the box is
+            smaller than this threshold, we stop the division.
+        
+        Returns
+        -------
+        list
+            the list of the OctreeBox instances in which there are no atoms in them
+        '''
+        taud = atoms
+        
+        # initialize the iteration
+        temp, boxes = [OctreeBox(np.array([0, 0, 0]), '')], []
+        size_min, iter = 1, 1
+        while size_min >= size_thr:
+            # when the size of the box is smaller than the threshold, we stop
+            logging.info(f'''iteration-{iter}
+    size_min: {size_min}, 
+    size_thr: {size_thr},
+    number of boxes: {len(boxes)}
+    ''')
+            # if there is no atoms in the box, we add it to the list
+            boxes.extend([box for box in temp 
+                            if OctreeBox.count_nat_in_box(taud, *box.boundaries()) == 0])
+            # for the rest, we divide them
+            temp = [box for box in temp 
+                    if OctreeBox.count_nat_in_box(taud, *box.boundaries()) > 0]
+            if len(temp) == 0:
+                break
+            temp = [box for b in temp for box in b.divide()]
+            size_min = min([box.length() for box in temp])
+
+            iter += 1
+            
+        # summary
+        logging.info(f'{"Box":<6}{"Center":<30}{"Length":<10}')
+        logging.info('-'*(6+30+10))
+        for i, box in enumerate(boxes):
+            logging.info(f'{i:<6}{str(box.center()):<30}{box.length():<10}')
+        
+        return boxes
+
+    @staticmethod
+    def kmeans(boxes: list, ncluster: int, niter: int, tol: float):
+        '''use the specialized version of K-means clustering algorithm
+        to cluster the OctreeBoxes into n clusters, according to their
+        PBC distances'''
+        logging.info('Performing K-means clustering on OctreeBoxes >>')
+        
+        def _boxdist(center: np.ndarray, box: 'OctreeBox'):
+            '''calculate the distance from one point to a box under PBC'''      
+            r = (box.center() - center + 0.5) % 1 - 0.5 # PBC distance
+            
+            # directions in which the point lays out of the box
+            idx = [i for i, ri in enumerate(r) if np.abs(ri) > box.length()/2]
+            if len(idx) == 0: # inside
+                return 0
+            else: # otherwise, the distance is the distance to the box surface
+                temp = np.linalg.norm(r) * (1 - box.length()/2/np.abs(r[idx[0]]))
+                assert temp >= 0, f'temp should be non-negative: {temp}'
+                return temp
+
+        centers = np.array([box.center() for box in np.random.choice(boxes, ncluster, replace=False)])
+        clusters = [[] for _ in range(ncluster)]
+        
+        logging.info(f'{"Iter":<6}{"Norm":<10}')
+        logging.info('-'*(6+10))
+        for i in range(niter):
+            # assign the boxes to the clusters
+            clusters = [[] for _ in range(ncluster)]
+            for box in boxes:
+                dists = [_boxdist(center, box) for center in centers]
+                clusters[np.argmin(dists)].append(box)
+                
+            # update the centers
+            centers_new = [[box.center() for box in cluster] for cluster in clusters]
+            # exception handling: some clusters may be empty, we keep the center unchanged
+            for j, center in enumerate(centers_new):
+                if len(center) == 0:
+                    centers_new[j] = centers[j]
+                else:
+                    centers_new[j] = np.mean(center, axis=0)
+            centers_new = np.array(centers_new)
+            
+            # check the convergence
+            norm = np.linalg.norm(centers_new - centers)
+            logging.info(f'{i:<6}{norm:<10}')
+            if norm < tol:
+                break
+            
+            centers = centers_new
+            
+        logging.info('<< K-means clustering finished')
+        return centers, clusters
 
 def spring_relax(cell: np.ndarray, 
                          tau: np.ndarray, 
@@ -221,7 +338,7 @@ def spring_relax(cell: np.ndarray,
     return center if direct else center @ cell
 
 class TestOctreeBox(unittest.TestCase):
-    def test_octreebox_code_and_num(self):
+    def test_code_and_num(self):
         code = '---,---'
         self.assertEqual(OctreeBox.num2code(OctreeBox.code2num(code)), code)
         code = '---,--+'
@@ -231,7 +348,7 @@ class TestOctreeBox(unittest.TestCase):
         code = '+-+,++-,---'
         self.assertEqual(OctreeBox.num2code(OctreeBox.code2num(code)), code)
 
-    def test_octreebox_center(self):
+    def test_center(self):
         # order 1
         box = OctreeBox(root=[0, 0, 0], code='---')
         self.assertTrue(np.allclose(box.center(), [-1/4, -1/4, -1/4]))
@@ -247,7 +364,7 @@ class TestOctreeBox(unittest.TestCase):
         box = OctreeBox(root=[0, 0, 0], code='-+-,-++')
         self.assertTrue(np.allclose(box.center(), [-3/8, 3/8, -1/8]))
     
-    def test_octreebox_length(self):
+    def test_length(self):
         # order 1
         box = OctreeBox(root=[0, 0, 0], code='---')
         self.assertEqual(box.length(), 1/2)
@@ -263,7 +380,7 @@ class TestOctreeBox(unittest.TestCase):
         box = OctreeBox(root=[0, 0, 0], code='-+-,-++')
         self.assertEqual(box.length(), 1/4)
         
-    def test_octreebox_boundaries(self):
+    def test_boundaries(self):
         # order 1
         box = OctreeBox(root=[0, 0, 0], code='---')
         self.assertTrue(np.allclose(box.boundaries(), [-1/2, 0, -1/2, 0, -1/2, 0]))
@@ -279,7 +396,7 @@ class TestOctreeBox(unittest.TestCase):
         box = OctreeBox(root=[0, 0, 0], code='-+-,-++')
         self.assertTrue(np.allclose(box.boundaries(), [-1/2, -1/4, 1/4, 1/2, -1/4, 0]))
 
-    def test_octreebox_divide(self):
+    def test_divide(self):
         # order 1
         box = OctreeBox(root=[0, 0, 0], code='---')
         boxes = box.divide()
@@ -295,7 +412,7 @@ class TestOctreeBox(unittest.TestCase):
         for c in it.product(['-', '+'], repeat=3):
             self.assertIn(','.join([box.code, ''.join(c)]), codes)
 
-    def test_octreebox_volume(self):
+    def test_volume(self):
         # order 1
         box = OctreeBox(root=[0, 0, 0], code='---')
         self.assertEqual(box.volume(), 1/8)
@@ -311,71 +428,127 @@ class TestOctreeBox(unittest.TestCase):
         box = OctreeBox(root=[0, 0, 0], code='-+-,-++')
         self.assertEqual(box.volume(), 1/64)
 
-    #@unittest.skip('now the boxes can be founded')
-    def test_octreebox_cavity(self):
+    def test_is_adjacent(self):
+        # order 1
+        box1 = OctreeBox(root=[0, 0, 0], code='---')
+        box2 = OctreeBox(root=[0, 0, 0], code='--+')
+        self.assertTrue(OctreeBox.is_adjacent(box1, box2))
+        box2 = OctreeBox(root=[0, 0, 0], code='+-+')
+        self.assertFalse(OctreeBox.is_adjacent(box1, box2))
+        # order 2
+        box1 = OctreeBox(root=[0, 0, 0], code='---,---')
+        box2 = OctreeBox(root=[0, 0, 0], code='---,--+')
+        self.assertTrue(OctreeBox.is_adjacent(box1, box2))
+        box2 = OctreeBox(root=[0, 0, 0], code='---,-+-')
+        self.assertTrue(OctreeBox.is_adjacent(box1, box2))
+        box2 = OctreeBox(root=[0, 0, 0], code='---,+-+')
+        self.assertFalse(OctreeBox.is_adjacent(box1, box2))
+        box2 = OctreeBox(root=[0, 0, 0], code='---,-++')
+        self.assertFalse(OctreeBox.is_adjacent(box1, box2))
+        # order 2
+        box1 = OctreeBox(root=[0, 0, 0], code='---,-++')
+        box2 = OctreeBox(root=[0, 0, 0], code='-+-,--+')
+        self.assertTrue(OctreeBox.is_adjacent(box1, box2))
+        box1 = OctreeBox(root=[0, 0, 0], code='---,+++')
+        box2 = OctreeBox(root=[0, 0, 0], code='--+,++-')
+        self.assertTrue(OctreeBox.is_adjacent(box1, box2))
+        box1 = OctreeBox(root=[0, 0, 0], code='---,+++')
+        box2 = OctreeBox(root=[0, 0, 0], code='---,+++')
+        self.assertFalse(OctreeBox.is_adjacent(box1, box2)) # overlapped!
+        # different order
+        box1 = OctreeBox(root=[0, 0, 0], code='---')
+        box2 = OctreeBox(root=[0, 0, 0], code='--+,++-')
+        self.assertTrue(OctreeBox.is_adjacent(box1, box2))
+        box2 = OctreeBox(root=[0, 0, 0], code='--+,+++')
+        self.assertTrue(OctreeBox.is_adjacent(box1, box2)) # because PBC!
+        box2 = OctreeBox(root=[0, 0, 0], code='-+-,+-+')
+        self.assertTrue(OctreeBox.is_adjacent(box1, box2))
+        box2 = OctreeBox(root=[0, 0, 0], code='+++,+++')
+        self.assertFalse(OctreeBox.is_adjacent(box1, box2))
+
+    def test_count_nat_in_box(self):
+        atoms = np.array([[0, 0, 0], [1, 1, 1], [2, 2, 2], [3, 3, 3]])
+        xlo, xhi, ylo, yhi, zlo, zhi = 1, 3, 1, 3, 1, 3
+        self.assertEqual(OctreeBox.count_nat_in_box(atoms, 
+                        xlo, xhi, ylo, yhi, zlo, zhi), 2)
+        xlo, xhi, ylo, yhi, zlo, zhi = 0, 3, 0, 3, 0, 3
+        self.assertEqual(OctreeBox.count_nat_in_box(atoms, 
+                        xlo, xhi, ylo, yhi, zlo, zhi), 3)
+        xlo, xhi, ylo, yhi, zlo, zhi = 0, 1, 0, 1, 0, 1
+        self.assertEqual(OctreeBox.count_nat_in_box(atoms, 
+                        xlo, xhi, ylo, yhi, zlo, zhi), 1)
+        xlo, xhi, ylo, yhi, zlo, zhi = 1, 2, 1, 2, 1, 2
+        self.assertEqual(OctreeBox.count_nat_in_box(atoms, 
+                        xlo, xhi, ylo, yhi, zlo, zhi), 1)
+
+    @unittest.skip('now the boxes can be founded')
+    def test_boxgen(self):
         '''this is a workflow, using the octree method to find all
         the cubes with no atoms in them, then we can find the cavity'''
-        size_thr = 1/2**4
-        from AbacusZeolite.data.iza import download
-        from pymatgen.io.cif import CifParser
+        from AbacusZeolite.data.IZA import download
+        from ase.io.cif import read_cif
+
+        fn = download(name='MFI')
+        parsed = read_cif(fn)
+        taud = parsed.get_scaled_positions()
+
+        # with in the range [-0.5, 0.5)
+        taud = (taud + 0.5) % 1 - 0.5
+
+        # get the boxes
+        boxes = OctreeBox.boxgen(taud, 1/2**4)
+
+        # boxes should only have the length of 1/2**n
+        ln2 = np.log(2)
+        for box in boxes:
+            self.assertAlmostEqual(np.log(box.length())%ln2, 0, delta=1e-10)
+
+    # @unittest.skip('Not yet implemented')
+    def test_box_merge(self):
+        from AbacusZeolite.data.IZA import download
+        from ase.io.cif import read_cif
         from ase.io import write
         from ase import Atoms
+
+        name = 'MFI'
+        level = 3
         
-        fn = download(name='MFI')
-        parsed = CifParser(fn)
-        cell = parsed.parse_structures()[0].lattice.matrix
-        tauc = parsed.parse_structures()[0].cart_coords
-        elem = parsed.parse_structures()[0].species
-        elem = [e.symbol for e in elem]
-                
+        fn = download(name=name)
+        parsed = read_cif(fn)
+        tauc = parsed.get_positions()
+        cell = parsed.get_cell()
+        elem = parsed.get_chemical_symbols()
+        
         # with in the range [-0.5, 0.5)
         taud = (np.linalg.solve(cell.T, tauc.T).T + 0.5) % 1 - 0.5
+
+        # get the boxes
+        boxes = OctreeBox.boxgen(taud, 1/2**level)
         
-        # initialize the iteration
-        temp, boxes = [OctreeBox(np.array([0, 0, 0]), '')], []
-        size_min = 1
-        while size_min >= size_thr:
-            # when the size of the box is smaller than the threshold, we stop
-            print(f'''
-size_min: {size_min}, 
-size_thr: {size_thr},
-number of boxes: {len(boxes)}
-''')
-            # if there is no atoms in the box, we add it to the list
-            boxes.extend([box for box in temp 
-                          if count_nat_in_box(taud, *box.boundaries()) == 0])
-            # for the rest, we divide them
-            temp = [box for box in temp 
-                    if count_nat_in_box(taud, *box.boundaries()) > 0]
-            if len(temp) == 0:
-                break
-            temp = [box for b in temp for box in b.divide()]
-            size_min = min([box.length() for box in temp])
+        # merge the boxes
+        centers, clusters = OctreeBox.kmeans(boxes, 
+                                             ncluster=10, 
+                                             niter=1000, 
+                                             tol=1e-5)
+        
+        # write all clusters to different files
+        for i, cluster in enumerate(clusters):
+            if len(cluster) == 0:
+                continue
+            newpos = np.array([box.center() for box in cluster]) @ cell
+            newpos = np.concatenate([tauc, newpos])
+            newelem = elem + ['X'] * len(cluster)
+            temp = Atoms(newelem, positions=newpos, cell=cell)
+            vol = np.sum([box.length()**3 for box in cluster])
+            logging.info(f'cluster-{i:>4} volume: {vol * np.linalg.det(cell):>10.4f}')
             
-        # summary
-        logging.info(f'{"Box":<6}{"Center":<30}{"Length":<10}')
-        logging.info('-'*(6+30+10))
-        for i, box in enumerate(boxes):
-            logging.info(f'{i:<6}{str(box.center()):<30}{box.length():<10}')
-                    
-        # get the center of the cavities of those with larger size
-        volume = [box.length()**3 for box in boxes]
-        max_volume = max(volume)
-        boxes = [box for i, box in enumerate(boxes) if volume[i] == max_volume]
-        center = np.array([box.center() for box in boxes])
-        center = center @ cell # convert to Cartesian coordinates
-        
-        # write a new file with the center
-        tauc_new = np.concatenate([tauc, center])
-        elem_new = elem + ['X'] * len(center)
-        temp = Atoms(elem_new, positions=tauc_new, cell=cell)
-        write('test.cif', temp)
-        
+            write(f'{name}_level{level}_cluster_{i}.cif', temp)
+
 class TestStructureZeoliteUtil(unittest.TestCase):
     
-    @unittest.skip('too time-consuming')
+    @unittest.skip('too time-consuming, deprecated')
     def test_spring_relax(self):
-        from AbacusZeolite.data.iza import download
+        from AbacusZeolite.data.IZA import download
         from ase.io.cif import read_cif
         from ase.io import write
         from ase import Atoms
@@ -397,16 +570,6 @@ class TestStructureZeoliteUtil(unittest.TestCase):
         temp = Atoms(elem_new, positions=tauc_new, cell=cell)
         write('test.cif', temp)
 
-    def test_count_nat_in_box(self):
-        atoms = np.array([[0, 0, 0], [1, 1, 1], [2, 2, 2], [3, 3, 3]])
-        xlo, xhi, ylo, yhi, zlo, zhi = 1, 3, 1, 3, 1, 3
-        self.assertEqual(count_nat_in_box(atoms, xlo, xhi, ylo, yhi, zlo, zhi), 2)
-        xlo, xhi, ylo, yhi, zlo, zhi = 0, 3, 0, 3, 0, 3
-        self.assertEqual(count_nat_in_box(atoms, xlo, xhi, ylo, yhi, zlo, zhi), 3)
-        xlo, xhi, ylo, yhi, zlo, zhi = 0, 1, 0, 1, 0, 1
-        self.assertEqual(count_nat_in_box(atoms, xlo, xhi, ylo, yhi, zlo, zhi), 1)
-        xlo, xhi, ylo, yhi, zlo, zhi = 1, 2, 1, 2, 1, 2
-        self.assertEqual(count_nat_in_box(atoms, xlo, xhi, ylo, yhi, zlo, zhi), 1)
 
 if __name__ == '__main__':
     flog = f'abacus-zeolite.structure.zeolite@{time.strftime("%Y-%m-%d_%H-%M-%S")}.log'

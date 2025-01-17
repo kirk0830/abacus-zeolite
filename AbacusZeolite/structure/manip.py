@@ -68,9 +68,9 @@ def _cal_mass_center(elem, coord):
         the Cartesian coordinates of the mass center
     '''
     datadir = os.path.join(os.path.dirname(where_am_i), 'data')
-    with open(os.path.join(datadir, 'atom_index.json')) as f:
+    with open(os.path.join(datadir, 'index.json')) as f:
         index = json.load(f)
-    with open(os.path.join(datadir, 'atom_mass.json')) as f:
+    with open(os.path.join(datadir, 'mass.json')) as f:
         mass = json.load(f)
     
     # because the mass is stored in a list, we need to get the atomic index to

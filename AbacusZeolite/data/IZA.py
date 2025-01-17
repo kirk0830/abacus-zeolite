@@ -130,7 +130,7 @@ def _download_kernel_impl(iza_id, outdir, fn):
     logging.info(f'<< IZA-ID {iza_id} downloaded')
     return os.path.join(outdir, fn)
 
-def download(ftab = f'{os.path.join(os.path.dirname(where_am_i), "data", "table", "zeolite_izaid.json")}',
+def download(ftab = f'{os.path.join(os.path.dirname(where_am_i), "data", "table", "IZA-id.json")}',
              outdir = f'{os.path.join(os.path.dirname(where_am_i), "data", "download")}',
              **kwargs):
     '''
