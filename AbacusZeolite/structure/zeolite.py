@@ -208,51 +208,65 @@ class OctreeBox:
         PBC distances'''
         logging.info('Performing K-means clustering on OctreeBoxes >>')
         
-        def _boxdist(center: np.ndarray, box: 'OctreeBox'):
-            '''calculate the distance from one point to a box under PBC'''      
-            r = (box.center() - center + 0.5) % 1 - 0.5 # PBC distance
-            
-            # directions in which the point lays out of the box
-            idx = [i for i, ri in enumerate(r) if np.abs(ri) > box.length()/2]
-            if len(idx) == 0: # inside
-                return 0
-            else: # otherwise, the distance is the distance to the box surface
-                temp = np.linalg.norm(r) * (1 - box.length()/2/np.abs(r[idx[0]]))
-                assert temp >= 0, f'temp should be non-negative: {temp}'
-                return temp
-
+        #centers = np.array([box.center() for box in np.random.choice(boxes, ncluster, replace=False)])
+        # we use PCA to initialize the centers
         centers = np.array([box.center() for box in np.random.choice(boxes, ncluster, replace=False)])
+        
         clusters = [[] for _ in range(ncluster)]
         
         logging.info(f'{"Iter":<6}{"Norm":<10}')
         logging.info('-'*(6+10))
+                    
         for i in range(niter):
-            # assign the boxes to the clusters
-            clusters = [[] for _ in range(ncluster)]
+            clusters = [[] for _ in range(ncluster)] # reset
             for box in boxes:
-                dists = [_boxdist(center, box) for center in centers]
-                clusters[np.argmin(dists)].append(box)
-                
-            # update the centers
-            centers_new = [[box.center() for box in cluster] for cluster in clusters]
-            # exception handling: some clusters may be empty, we keep the center unchanged
-            for j, center in enumerate(centers_new):
-                if len(center) == 0:
-                    centers_new[j] = centers[j]
-                else:
-                    centers_new[j] = np.mean(center, axis=0)
-            centers_new = np.array(centers_new)
+                dist = np.linalg.norm((centers - box.center() + 0.5)%1 - 0.5, axis=1)
+                clusters[np.argmin(dist)].append(box) # box assigned to the nearest center
+
+            # update the centers: average coordinate of boxes' centers of the cluster
+            # BUG: the average is not directly the center of the cluster, instead, the
+            #      average between a and b should be:
+            #      ((a%1 + b%1)/2 - 0.5)%1 + 0.5
+            #      for example the -0.4 and +0.4, the correct answer should be +/-0.5
+            centers_new = np.array([(np.average(np.array([box.center() for box in cluster])%1, axis=0) - 0.5)%1 + 0.5
+                                    for cluster in clusters])
             
-            # check the convergence
-            norm = np.linalg.norm(centers_new - centers)
-            logging.info(f'{i:<6}{norm:<10}')
-            if norm < tol:
+            eps = np.linalg.norm(centers_new%1) - np.linalg.norm(centers%1)
+            logging.info(f'{i:<6}{eps:<10}')
+            
+            if np.abs(eps) <= tol:
                 break
             
             centers = centers_new
             
         logging.info('<< K-means clustering finished')
         return centers, clusters
+
+    @staticmethod
+    def sklearn_cluster_method(boxes: list):
+        '''use the support vector machine to classify the boxes with the distance
+        defined by PBC adpated distance'''
+        from sklearn.cluster import AffinityPropagation
+        from sklearn.metrics import pairwise_distances
+        
+        data = np.array([box.center() for box in boxes] )
+        # customized definition of the distance
+        def eval_dist(x, y):
+            return np.linalg.norm((x - y + 0.5)%1 - 0.5)
+        
+        clustering = AffinityPropagation(affinity='precomputed',
+                                         verbose=True,
+                                         preference=-1)
+        mat = pairwise_distances(data, metric=eval_dist)
+        
+        labels = clustering.fit_predict(mat)
+        
+        # returns the center of each cluster
+        centers = []
+        for i in np.unique(labels):
+            centers.append(np.average(data[labels == i], axis=0))
+                    
+        return centers            
 
 def spring_relax(cell: np.ndarray, 
                          tau: np.ndarray, 
@@ -511,38 +525,64 @@ class TestOctreeBox(unittest.TestCase):
         from ase import Atoms
 
         name = 'MFI'
-        level = 3
+        dr = 2.0 # in Angstrom
         
         fn = download(name=name)
         parsed = read_cif(fn)
+        
+        level = max([int(np.ceil(np.log(c/dr)/np.log(2))) for c in parsed.cell.cellpar()[:3]])
+        
         tauc = parsed.get_positions()
-        cell = parsed.get_cell()
+        cell = parsed.get_cell() # in Angstrom
         elem = parsed.get_chemical_symbols()
         
         # with in the range [-0.5, 0.5)
         taud = (np.linalg.solve(cell.T, tauc.T).T + 0.5) % 1 - 0.5
 
-        # get the boxes
+        # there is a possible strategy for finding the centers of cavaties
+        # 1. do the OctreeBox.boxgen to split the space into small boxes
+        # 2. remove those boxes with the smallest size because those are
+        #    the boxes with atoms in them
+        # 3. unify the boxes with the same size by dividing them, this can
+        #    unify the distance of the centers of the boxes
+        # 4. do k-means clustering to find the centers of the cavaties
+        
+        # 1. do the OctreeBox.boxgen to split the space into small boxes
         boxes = OctreeBox.boxgen(taud, 1/2**level)
         
-        # merge the boxes
-        centers, clusters = OctreeBox.kmeans(boxes, 
-                                             ncluster=10, 
-                                             niter=1000, 
-                                             tol=1e-5)
+        # 2. remove those boxes with the smallest size because those are
+        #    the boxes with atoms in them
+        sizes = np.unique([box.length() for box in boxes])
+        if len(sizes) > 1:
+            min_size = min(sizes)
+            boxes = [box for box in boxes if box.length() != min_size]
+        # otherwise, all boxes with the same size, we do nothing
         
-        # write all clusters to different files
-        for i, cluster in enumerate(clusters):
-            if len(cluster) == 0:
-                continue
-            newpos = np.array([box.center() for box in cluster]) @ cell
-            newpos = np.concatenate([tauc, newpos])
-            newelem = elem + ['X'] * len(cluster)
-            temp = Atoms(newelem, positions=newpos, cell=cell)
-            vol = np.sum([box.length()**3 for box in cluster])
-            logging.info(f'cluster-{i:>4} volume: {vol * np.linalg.det(cell):>10.4f}')
-            
-            write(f'{name}_level{level}_cluster_{i}.cif', temp)
+        # 3. unify the boxes with the same size by dividing them, this can
+        #    unify the distance of the centers of the boxes
+        boxes_unified = []
+        for box in boxes:
+            length = box.length()
+            boxes_ = [box]
+            while length > 1/2**level:
+                boxes_ = [b for box_ in boxes_ for b in box_.divide()]
+                length /= 2
+            boxes_unified.extend(boxes_)
+        
+        # 4. do k-means clustering to find the centers of the cavaties
+        centers, _ = OctreeBox.kmeans(boxes_unified, 
+                                      20, 
+                                      niter=1000, 
+                                      tol=1e-10)
+        # centers = OctreeBox.sklearn_cluster_method(boxes_unified)
+        
+        # write the centers to a new file
+        boxes = [box.center() for box in boxes_unified]
+        taud_new = np.concatenate([taud, centers, boxes])
+        tauc_new = taud_new @ cell
+        elem_new = elem + ['Rn'] * len(centers) + ['X'] * len(boxes)
+        temp = Atoms(elem_new, positions=tauc_new, cell=cell)
+        write(f'{name}_cavity.cif', temp)
 
 class TestStructureZeoliteUtil(unittest.TestCase):
     
